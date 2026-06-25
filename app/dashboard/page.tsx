@@ -3,7 +3,6 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
-import { Music2 } from 'lucide-react';
 
 export default function Dashboard() {
   const { data: session, status } = useSession();

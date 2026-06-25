@@ -1,4 +1,3 @@
-import Image from "next/image"
 import { ChevronUp, ChevronDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import type { QueueItem } from "../types/Music"

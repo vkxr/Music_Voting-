@@ -1,16 +1,22 @@
 import { redis } from '@/lib/redis';
 import { getQueue } from '@/lib/queue';
 import { NextRequest } from 'next/server';
-import { createClient } from 'redis';
 
 export const dynamic = 'force-dynamic';
+
+interface PubSubClient {
+  connect(): Promise<void>;
+  subscribe(channel: string, listener: (message: string) => void): Promise<unknown>;
+  unsubscribe(channel?: string): Promise<unknown>;
+  disconnect(): Promise<void>;
+}
 
 export async function GET(req: NextRequest) {
   const creatorId = req.nextUrl.searchParams.get('creatorId');
   if (!creatorId) return new Response('Missing creatorId', { status: 400 });
 
   const encoder = new TextEncoder();
-  let subscriber: ReturnType<typeof createClient> | null = null;
+  let subscriber: PubSubClient | null = null;
 
   const stream = new ReadableStream({
     async start(controller) {
@@ -25,9 +31,8 @@ export async function GET(req: NextRequest) {
         redis.get(`queue_mode:${creatorId}`),
       ]);
 
-      // Send remainingMs (time left in ms) so client clock sync doesn't matter
-      const endsAtMs = endsAtRaw ? parseInt(endsAtRaw) : null;
-      const remainingMs = endsAtMs ? Math.max(0, endsAtMs - Date.now()) : null;
+      const endsAtMs    = endsAtRaw ? parseInt(endsAtRaw) : null;
+      const remainingMs = endsAtMs  ? Math.max(0, endsAtMs - Date.now()) : null;
 
       send({
         type: 'INIT',
@@ -41,9 +46,9 @@ export async function GET(req: NextRequest) {
         try { controller.enqueue(encoder.encode(': ping\n\n')); } catch { clearInterval(ping); }
       }, 25000);
 
-      subscriber = redis.duplicate();
-      await (subscriber as any).connect();
-      await (subscriber as any).subscribe(`updates:${creatorId}`, (message: string) => {
+      subscriber = redis.duplicate() as unknown as PubSubClient;
+      await subscriber.connect();
+      await subscriber.subscribe(`updates:${creatorId}`, (message: string) => {
         send(JSON.parse(message));
       });
 
@@ -52,8 +57,8 @@ export async function GET(req: NextRequest) {
 
     async cancel() {
       try {
-        await (subscriber as any)?.unsubscribe();
-        await (subscriber as any)?.disconnect();
+        await subscriber?.unsubscribe();
+        await subscriber?.disconnect();
       } catch {}
     },
   });

@@ -11,6 +11,12 @@ import {
 import type { QueueItem, QueueMode, SSEEvent } from '@/app/types/Music';
 
 const ROUND_SECS = 5 * 60;
+
+interface YTPlayer { loadVideoById(id: string): void; destroy(): void; }
+interface YTWindow extends Window {
+  YT?: { Player: new (el: string, opts: object) => YTPlayer };
+  onYouTubeIframeAPIReady?: () => void;
+}
 const ytThumb   = (id: string) => `https://img.youtube.com/vi/${id}/hqdefault.jpg`;
 const ytThumbHD = (id: string) => `https://img.youtube.com/vi/${id}/maxresdefault.jpg`;
 
@@ -64,7 +70,7 @@ export default function StreamPage() {
 
   const advRef      = useRef(false);
   const inputRef    = useRef<HTMLInputElement>(null);
-  const ytPlayerRef = useRef<any>(null);
+  const ytPlayerRef = useRef<YTPlayer | null>(null);
   const ytReadyRef  = useRef(false);
   const ytPendVid   = useRef('');
   const isCreator = !!userId && userId === creatorId;
@@ -106,7 +112,8 @@ export default function StreamPage() {
   useEffect(() => {
     function initPlayer() {
       ytReadyRef.current = true;
-      ytPlayerRef.current = new (window as any).YT.Player('yt-player-div', {
+      const yw = window as unknown as YTWindow;
+      ytPlayerRef.current = new yw.YT!.Player('yt-player-div', {
         height: '100%', width: '100%',
         playerVars: { autoplay: 1, controls: 1, rel: 0, modestbranding: 1 },
         events: {
@@ -115,7 +122,7 @@ export default function StreamPage() {
               try { ytPlayerRef.current?.loadVideoById(ytPendVid.current); } catch {}
             }
           },
-          onStateChange(e: any) {
+          onStateChange(e: { data: number }) {
             if (e.data === 0 && !advRef.current) {
               advRef.current = true;
               fetch('/api/streams/next', {
@@ -127,10 +134,11 @@ export default function StreamPage() {
         },
       });
     }
-    if ((window as any).YT?.Player) {
+    const yw = window as unknown as YTWindow;
+    if (yw.YT?.Player) {
       initPlayer();
     } else {
-      (window as any).onYouTubeIframeAPIReady = initPlayer;
+      yw.onYouTubeIframeAPIReady = initPlayer;
       if (!document.getElementById('yt-api-script')) {
         const tag = document.createElement('script');
         tag.id = 'yt-api-script'; tag.src = 'https://www.youtube.com/iframe_api';

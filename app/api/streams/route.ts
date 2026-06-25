@@ -4,7 +4,7 @@ import { getQueue, publishUpdate } from '@/lib/queue';
 import { getServerSession } from 'next-auth';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-// @ts-ignore
+// @ts-expect-error — no types for youtube-search-api
 import youtubesearchapi from 'youtube-search-api';
 
 const YT_REGEX = /^https?:\/\/(www\.)?youtube\.com\/watch\?v=[\w-]+(&\S*)?$/;
