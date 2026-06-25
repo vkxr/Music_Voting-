@@ -270,10 +270,30 @@ export default function StreamPage() {
 
         {/* Logo section — sidebar background, separated by right border */}
         <div className="mv-header-logo" style={{ width: 148, flexShrink: 0, background: C.sidebar, display: 'flex', alignItems: 'center', gap: 8, paddingLeft: 16, borderRight: `1px solid ${C.border}` }}>
-          <div style={{ width: 24, height: 24, borderRadius: 6, background: C.accent, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ width: 24, height: 24, borderRadius: 6, background: C.accent, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
             <Music2 style={{ width: 12, height: 12, color: 'white' }} />
           </div>
           <span style={{ fontWeight: 700, fontSize: 13 }}>MusicVote</span>
+
+          {/* Mobile-only: account info + sign-out / sign-in — hidden on desktop */}
+          <div className="mv-mobile-account" style={{ display: 'none', alignItems: 'center', gap: 8, marginLeft: 'auto' }}>
+            {session?.user ? (
+              <>
+                <Avatar user={session.user} size={26} />
+                <span style={{ fontSize: 12, fontWeight: 500, maxWidth: 70, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: C.text }}>
+                  {session.user.name?.split(' ')[0]}
+                </span>
+                <button onClick={handleSignOut} style={{ display: 'flex', alignItems: 'center', gap: 4, height: 28, padding: '0 10px', borderRadius: 6, background: 'rgba(255,255,255,0.07)', color: C.textSec, border: `1px solid ${C.border}`, cursor: 'pointer', fontSize: 11, fontWeight: 500 }}>
+                  <LogOut style={{ width: 11, height: 11 }} />
+                  Sign Out
+                </button>
+              </>
+            ) : (
+              <button onClick={() => signIn('google')} style={{ height: 28, padding: '0 12px', borderRadius: 6, background: C.accent, color: 'white', fontSize: 11, fontWeight: 600, border: 'none', cursor: 'pointer' }}>
+                Sign In
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Content section — left side dark so tabs stay legible; right fades to transparent over thumbnail */}
@@ -354,23 +374,36 @@ export default function StreamPage() {
       </header>
 
       {/* ══ MOBILE SEARCH BAR — hidden on desktop via CSS ══ */}
-      <div className="mv-mobile-search" style={{ display: 'none', padding: '8px 12px', gap: 8, background: C.sidebar, borderBottom: `1px solid ${C.border}`, alignItems: 'center' }}>
-        <div style={{ flex: 1, display: 'flex', gap: 6 }}>
-          <input
-            value={url}
-            onChange={e => setUrl(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && addSong()}
-            placeholder="Paste YouTube URL to add song…"
-            style={{ flex: 1, height: 36, padding: '0 12px', borderRadius: 7, background: 'rgba(255,255,255,0.07)', border: `1px solid ${C.border}`, color: C.text, fontSize: 13, outline: 'none' }}
-          />
-          <button
-            onClick={addSong}
-            disabled={adding || !url.trim()}
-            style={{ height: 36, padding: '0 14px', borderRadius: 7, background: C.accent, color: 'white', fontSize: 12, fontWeight: 600, border: 'none', cursor: 'pointer', flexShrink: 0, opacity: adding || !url.trim() ? 0.5 : 1 }}>
-            {adding ? '…' : 'Add'}
-          </button>
-        </div>
-        {addError && <p style={{ fontSize: 11, color: C.red, flexShrink: 0 }}>{addError}</p>}
+      <div className="mv-mobile-search" style={{ display: 'none', padding: '8px 12px', gap: 8, background: C.sidebar, borderBottom: `1px solid ${C.border}`, alignItems: 'center', flexShrink: 0 }}>
+        {!session?.user ? (
+          <div style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+            <p style={{ fontSize: 12, color: C.textMut }}>Sign in to add songs</p>
+            <button onClick={() => signIn('google')} style={{ height: 30, padding: '0 14px', borderRadius: 7, background: C.accent, color: 'white', fontSize: 12, fontWeight: 600, border: 'none', cursor: 'pointer' }}>
+              Sign In
+            </button>
+          </div>
+        ) : isLocked ? (
+          <p style={{ width: '100%', textAlign: 'center', fontSize: 12, color: C.textMut }}>🔒 Queue is creator-only mode</p>
+        ) : (
+          <>
+            <div style={{ flex: 1, display: 'flex', gap: 6 }}>
+              <input
+                value={url}
+                onChange={e => { setUrl(e.target.value); setAddError(''); }}
+                onKeyDown={e => e.key === 'Enter' && addSong()}
+                placeholder="Paste YouTube URL to add song…"
+                style={{ flex: 1, height: 36, padding: '0 12px', borderRadius: 7, background: 'rgba(255,255,255,0.07)', border: `1px solid ${C.border}`, color: C.text, fontSize: 13, outline: 'none' }}
+              />
+              <button
+                onClick={addSong}
+                disabled={adding || !url.trim()}
+                style={{ height: 36, padding: '0 14px', borderRadius: 7, background: C.accent, color: 'white', fontSize: 12, fontWeight: 600, border: 'none', cursor: 'pointer', flexShrink: 0, opacity: adding || !url.trim() ? 0.5 : 1 }}>
+                {adding ? '…' : 'Add'}
+              </button>
+            </div>
+            {addError && <p style={{ fontSize: 11, color: C.red, flexShrink: 0 }}>{addError}</p>}
+          </>
+        )}
       </div>
 
       {/* ══ BODY ══ */}
@@ -684,6 +717,13 @@ export default function StreamPage() {
                 Background = C.bg so only the card shows (no full-height coloured column).
             */}
             <aside className={`mv-player${showMobilePlayer ? ' mv-show' : ''}`} style={{ width: 430, flexShrink: 0, background: C.bg, padding: '16px 20px 16px 8px', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+
+              {/* Drag handle + close — only visible on mobile (CSS controls display) */}
+              <div className="mv-mobile-player-close" style={{ display: 'none', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '10px 0 6px', background: C.sidebar, flexShrink: 0 }}
+                onClick={() => setShowMobilePlayer(false)}>
+                <div style={{ width: 36, height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.22)' }} />
+                <span style={{ fontSize: 10, color: C.textMut, letterSpacing: '0.08em', userSelect: 'none' }}>CLOSE</span>
+              </div>
 
               <div style={{ background: C.card, borderRadius: 14, overflow: 'hidden', flex: 1, display: 'flex', flexDirection: 'column' }}>
 
