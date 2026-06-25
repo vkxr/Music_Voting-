@@ -108,8 +108,9 @@ export default function StreamPage() {
     return () => clearInterval(t);
   }, [isCreator, creatorId]);
 
-  // YouTube IFrame API — detects video end to auto-advance
+  // YouTube IFrame API — creator only; viewers see a static thumbnail, not a live player
   useEffect(() => {
+    if (!isCreator) return;
     function initPlayer() {
       ytReadyRef.current = true;
       const yw = window as unknown as YTWindow;
@@ -146,17 +147,18 @@ export default function StreamPage() {
       }
     }
     return () => { try { ytPlayerRef.current?.destroy(); } catch {} ytPlayerRef.current = null; ytReadyRef.current = false; };
-  }, [creatorId]);
+  }, [isCreator, creatorId]);
 
-  // Load new video when now-playing changes
+  // Load new video when now-playing changes — creator only
   useEffect(() => {
+    if (!isCreator) return;
     const vid = nowPlaying?.extractedId ?? '';
     ytPendVid.current = vid;
     if (!vid) return;
     if (ytPlayerRef.current && ytReadyRef.current) {
       try { ytPlayerRef.current.loadVideoById(vid); } catch {}
     }
-  }, [nowPlaying?.extractedId]);
+  }, [isCreator, nowPlaying?.extractedId]);
 
   useEffect(() => {
     if (!endsAt) return;
@@ -650,11 +652,35 @@ export default function StreamPage() {
                   </div>
                 </div>
 
-                {/* VIDEO AREA — YT IFrame API player; end event triggers auto-advance */}
+                {/* VIDEO AREA — iframe for creator; thumbnail preview for viewers */}
                 <div style={{ flex: 1, background: C.cardHi, overflow: 'hidden', position: 'relative' }}>
-                  <div id="yt-player-div" style={{ width: '100%', height: '100%' }} />
-                  {!nowPlaying && (
-                    <div style={{ position: 'absolute', inset: 0, background: C.cardHi, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, pointerEvents: 'none' }}>
+                  {isCreator ? (
+                    <>
+                      <div id="yt-player-div" style={{ width: '100%', height: '100%' }} />
+                      {!nowPlaying && (
+                        <div style={{ position: 'absolute', inset: 0, background: C.cardHi, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, pointerEvents: 'none' }}>
+                          <Music2 style={{ width: 44, height: 44, color: C.textMut }} />
+                          <p style={{ fontSize: 12, color: C.textMut }}>No song playing</p>
+                        </div>
+                      )}
+                    </>
+                  ) : nowPlaying ? (
+                    <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+                      <img
+                        src={ytThumbHD(nowPlaying.extractedId)}
+                        onError={(e) => { const t = e.target as HTMLImageElement; if (!t.src.includes('hqdefault')) t.src = ytThumb(nowPlaying.extractedId); }}
+                        alt={nowPlaying.title}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                      />
+                      <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.38)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                        <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'rgba(255,255,255,0.12)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <Music2 style={{ width: 20, height: 20, color: 'white' }} />
+                        </div>
+                        <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.70)', fontWeight: 500 }}>Playing on creator&apos;s device</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
                       <Music2 style={{ width: 44, height: 44, color: C.textMut }} />
                       <p style={{ fontSize: 12, color: C.textMut }}>No song playing</p>
                     </div>
