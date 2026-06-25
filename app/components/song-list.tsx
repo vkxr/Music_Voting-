@@ -1,10 +1,10 @@
 import Image from "next/image"
 import { ChevronUp, ChevronDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import type { Track } from "../types/Music"
+import type { QueueItem } from "../types/Music"
 
 interface SongListProps {
-  tracks: Track[]
+  tracks: QueueItem[]
   onVote: (trackId: string, isUpvote: boolean) => void
 }
 

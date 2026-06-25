@@ -2,10 +2,10 @@
 
 import { Button } from "@/components/ui/button"
 import { Play } from "lucide-react"
-import type { Track } from "../types/Music"
+import type { QueueItem } from "../types/Music"
 
 interface YouTubePlayerProps {
-  currentTrack: Track | null
+  currentTrack: QueueItem | null
   onPlayNext: () => void
 }
 
@@ -14,9 +14,9 @@ export function YouTubePlayer({ currentTrack, onPlayNext }: YouTubePlayerProps) 
     <div className="space-y-4">
       <h2 className="text-xl font-semibold">Now Playing</h2>
       <div className="relative aspect-video bg-gray-900 rounded-lg overflow-hidden">
-        {currentTrack?.youtubeUrl ? (
+        {currentTrack?.extractedId ? (
           <iframe
-            src={`https://www.youtube.com/embed/${currentTrack.youtubeUrl}?autoplay=1`}
+            src={`https://www.youtube.com/embed/${currentTrack.extractedId}?autoplay=1`}
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
             allowFullScreen
             className="absolute inset-0 w-full h-full"

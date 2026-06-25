@@ -1,49 +1,46 @@
-import { prismaClient } from "@/app/lib/db";
-import { PrismaClient } from "@prisma/client";
-import { getServerSession } from "next-auth";
-import { NextRequest, NextResponse } from "next/server";
-import { z } from "zod";
+import { redis } from '@/lib/redis';
+import { getQueue, publishUpdate } from '@/lib/queue';
+import { getServerSession } from 'next-auth';
+import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 
-const UpvoteSchema = z.object({
-  streamId: z.string(),
-});
+const Schema = z.object({ streamId: z.string(), creatorId: z.string() });
+
+function getIp(req: NextRequest): string {
+  return req.headers.get('x-forwarded-for')?.split(',')[0].trim() ?? req.headers.get('x-real-ip') ?? 'anon';
+}
+
 export async function POST(req: NextRequest) {
   const session = await getServerSession();
-  // TODO: You can get rid of the db call here
-  const user = await prismaClient.user.findFirst({
-    where: {
-      email: session?.user?.email ?? "",
-    },
-  });
+  const identifier = session?.user?.email ? `user:${session.user.email}` : `ip:${getIp(req)}`;
 
-  if (!user) {
-    return NextResponse.json(
-      {
-        message: "Unauthenticsted",
-      },
-      {
-        status: 403,
-      }
-    );
+  let body: z.infer<typeof Schema>;
+  try { body = Schema.parse(await req.json()); }
+  catch { return NextResponse.json({ message: 'Invalid request' }, { status: 400 }); }
+
+  const { streamId, creatorId } = body;
+
+  const inQueue = await redis.zScore(`queue:${creatorId}`, streamId);
+  if (inQueue === null) return NextResponse.json({ message: 'Song not in queue' }, { status: 404 });
+
+  const activeVoteKey = `active_vote:${identifier}:${creatorId}`;
+  const currentVote = await redis.get(activeVoteKey);
+
+  // Downvote only allowed on the song the user voted for
+  if (currentVote !== streamId) {
+    return NextResponse.json({
+      message: 'You have not voted for this song.',
+      activeVoteStreamId: currentVote ?? null,
+    }, { status: 400 });
   }
-  try {
-    const data = UpvoteSchema.parse(await req.json());
-    await prismaClient.upvote.delete({
-      where: {
-        userId_streamId: {
-          userId: user.id,
-          streamId: data.streamId,
-        },
-      },
-    });
-  } catch (e) {
-    return NextResponse.json(
-      {
-        message: "Error while upvoting",
-      },
-      {
-        status: 403,
-      }
-    );
-  }
+
+  // Remove vote — clamp score to 0
+  const newScore = Math.max(0, inQueue - 1);
+  await Promise.all([
+    redis.zAdd(`queue:${creatorId}`, { score: newScore, value: streamId }),
+    redis.del(activeVoteKey),
+  ]);
+  const queue = await getQueue(creatorId);
+  await publishUpdate(creatorId, { type: 'QUEUE_UPDATE', queue });
+  return NextResponse.json({ message: 'Vote removed', activeVoteStreamId: null });
 }
