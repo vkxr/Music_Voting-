@@ -68,6 +68,7 @@ export default function StreamPage() {
   const [skipping,     setSkipping]     = useState(false);
   const [liveCount,    setLiveCount]    = useState(0);
   const [streamEnded,  setStreamEnded]  = useState(false);
+  const [showMobilePlayer, setShowMobilePlayer] = useState(false);
 
   const advRef      = useRef(false);
   const inputRef    = useRef<HTMLInputElement>(null);
@@ -262,13 +263,13 @@ export default function StreamPage() {
   );
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden', background: C.bg, color: C.text, fontFamily: 'system-ui,-apple-system,sans-serif', fontSize: 14, position: 'relative' }}>
+    <div className="mv-root" style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden', background: C.bg, color: C.text, fontFamily: 'system-ui,-apple-system,sans-serif', fontSize: 14, position: 'relative' }}>
 
       {/* ══ TOP BAR — absolute overlay so hero thumbnail bleeds behind it ══ */}
-      <header style={{ height: 44, display: 'flex', alignItems: 'stretch', position: 'absolute', top: 0, left: 0, right: 0, zIndex: 20 }}>
+      <header className="mv-header" style={{ height: 44, display: 'flex', alignItems: 'stretch', position: 'absolute', top: 0, left: 0, right: 0, zIndex: 20 }}>
 
         {/* Logo section — sidebar background, separated by right border */}
-        <div style={{ width: 148, flexShrink: 0, background: C.sidebar, display: 'flex', alignItems: 'center', gap: 8, paddingLeft: 16, borderRight: `1px solid ${C.border}` }}>
+        <div className="mv-header-logo" style={{ width: 148, flexShrink: 0, background: C.sidebar, display: 'flex', alignItems: 'center', gap: 8, paddingLeft: 16, borderRight: `1px solid ${C.border}` }}>
           <div style={{ width: 24, height: 24, borderRadius: 6, background: C.accent, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <Music2 style={{ width: 12, height: 12, color: 'white' }} />
           </div>
@@ -276,7 +277,7 @@ export default function StreamPage() {
         </div>
 
         {/* Content section — left side dark so tabs stay legible; right fades to transparent over thumbnail */}
-        <div style={{ flex: 1, background: `linear-gradient(to right, ${C.bg} 0%, ${C.bg} 46%, transparent 72%)`, display: 'flex', alignItems: 'center', gap: 10, padding: '0 16px 0 14px' }}>
+        <div className="mv-header-nav" style={{ flex: 1, background: `linear-gradient(to right, ${C.bg} 0%, ${C.bg} 46%, transparent 72%)`, display: 'flex', alignItems: 'center', gap: 10, padding: '0 16px 0 14px' }}>
 
           {/* MUSIC / QUEUE / LIVE tabs — Groovvy exact, each does something */}
           <div style={{ display: 'flex', gap: 0, flexShrink: 0 }}>
@@ -295,7 +296,7 @@ export default function StreamPage() {
           </div>
 
           {/* Search bar — squarish (borderRadius 7px, not pill) matching Groovvy */}
-          <div style={{ flex: 1, maxWidth: 360, display: 'flex', gap: 6 }}>
+          <div className="mv-header-search" style={{ flex: 1, maxWidth: 360, display: 'flex', gap: 6 }}>
             <div style={{ flex: 1, height: 30, display: 'flex', alignItems: 'center', gap: 7, padding: '0 10px', borderRadius: 7, background: 'rgba(255,255,255,0.07)', border: `1px solid ${C.border}` }}>
               <Search style={{ width: 12, height: 12, color: C.textMut, flexShrink: 0 }} />
               <input ref={inputRef} type="text"
@@ -324,7 +325,7 @@ export default function StreamPage() {
           {addError && <p style={{ fontSize: 11, color: C.red, flexShrink: 0, maxWidth: 110, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{addError}</p>}
 
           {/* Right icons — same as Groovvy: bell gear live profile */}
-          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <div className="mv-header-icons" style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>
             <button style={{ width: 28, height: 28, borderRadius: 7, background: 'rgba(255,255,255,0.05)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <Bell style={{ width: 13, height: 13, color: C.textSec }} />
             </button>
@@ -352,11 +353,31 @@ export default function StreamPage() {
         </div>
       </header>
 
+      {/* ══ MOBILE SEARCH BAR — hidden on desktop via CSS ══ */}
+      <div className="mv-mobile-search" style={{ display: 'none', padding: '8px 12px', gap: 8, background: C.sidebar, borderBottom: `1px solid ${C.border}`, alignItems: 'center' }}>
+        <div style={{ flex: 1, display: 'flex', gap: 6 }}>
+          <input
+            value={url}
+            onChange={e => setUrl(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && addSong()}
+            placeholder="Paste YouTube URL to add song…"
+            style={{ flex: 1, height: 36, padding: '0 12px', borderRadius: 7, background: 'rgba(255,255,255,0.07)', border: `1px solid ${C.border}`, color: C.text, fontSize: 13, outline: 'none' }}
+          />
+          <button
+            onClick={addSong}
+            disabled={adding || !url.trim()}
+            style={{ height: 36, padding: '0 14px', borderRadius: 7, background: C.accent, color: 'white', fontSize: 12, fontWeight: 600, border: 'none', cursor: 'pointer', flexShrink: 0, opacity: adding || !url.trim() ? 0.5 : 1 }}>
+            {adding ? '…' : 'Add'}
+          </button>
+        </div>
+        {addError && <p style={{ fontSize: 11, color: C.red, flexShrink: 0 }}>{addError}</p>}
+      </div>
+
       {/* ══ BODY ══ */}
-      <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+      <div className="mv-body" style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
 
         {/* ══ LEFT SIDEBAR ══ */}
-        <aside style={{ width: 148, flexShrink: 0, background: C.sidebar, borderRight: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', overflowY: 'auto', paddingTop: 44 }}>
+        <aside className="mv-sidebar" style={{ width: 148, flexShrink: 0, background: C.sidebar, borderRight: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', overflowY: 'auto', paddingTop: 44 }}>
           <div style={{ padding: '18px 12px 0' }}>
             <p style={{ fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.13em', color: C.textMut, marginBottom: 10, paddingLeft: 2 }}>MENU</p>
             {[
@@ -443,17 +464,17 @@ export default function StreamPage() {
         </aside>
 
         {/* ══ CONTENT + PLAYER WRAPPER ══ */}
-        <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
+        <div className="mv-content" style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
 
           {/* ══ HERO — extends behind the absolute header; thumbnail bleeds to top ══ */}
-          <div style={{ height: 344, flexShrink: 0, background: C.bg, display: 'flex', overflow: 'hidden', position: 'relative' }}>
+          <div className="mv-hero" style={{ height: 344, flexShrink: 0, background: C.bg, display: 'flex', overflow: 'hidden', position: 'relative' }}>
 
             {/* Left 58%: text — paddingTop:76 keeps text below the 44px header */}
-            <div style={{ flex: '0 0 58%', padding: '76px 40px 32px', display: 'flex', flexDirection: 'column', justifyContent: 'center', minWidth: 0 }}>
+            <div className="mv-hero-text" style={{ flex: '0 0 58%', padding: '76px 40px 32px', display: 'flex', flexDirection: 'column', justifyContent: 'center', minWidth: 0 }}>
               <p style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.18em', color: 'rgba(255,255,255,0.40)', marginBottom: 14, lineHeight: 1 }}>
                 {nowPlaying ? 'Trending New Hits' : 'Your Vote Queue'}
               </p>
-              <h1 style={{ fontWeight: 800, fontSize: 54, letterSpacing: '-0.03em', lineHeight: 1.05, marginBottom: 10, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <h1 className="mv-hero-title" style={{ fontWeight: 800, fontSize: 54, letterSpacing: '-0.03em', lineHeight: 1.05, marginBottom: 10, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {nowPlaying?.title ?? 'Add a Song to Start'}
               </h1>
               <p style={{ fontSize: 15, color: C.textSec, marginBottom: 24, lineHeight: 1.4 }}>
@@ -486,7 +507,7 @@ export default function StreamPage() {
             </div>
 
             {/* Right 42%: album art thumbnail (Groovvy artist photo style) */}
-            <div style={{ flex: '0 0 42%', position: 'relative', overflow: 'hidden' }}>
+            <div className="mv-hero-thumb" style={{ flex: '0 0 42%', position: 'relative', overflow: 'hidden' }}>
               {nowPlaying ? (
                 <>
                   {/* maxresdefault = 1280×720, true 16:9, no letterbox bars.
@@ -522,7 +543,7 @@ export default function StreamPage() {
           <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
 
             {/* ══ LEFT MAIN — fills full remaining height (NO scroll, flex-col) ══ */}
-            <main style={{ flex: 1, overflow: 'hidden', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <main className="mv-main" style={{ flex: 1, overflow: 'hidden', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 16 }}>
 
               {/* VOTE QUEUE — flex:1 so it takes equal share (doubles its height vs bottom grid) */}
               <div style={{ background: C.card, borderRadius: 12, flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
@@ -579,7 +600,7 @@ export default function StreamPage() {
               </div>
 
               {/* BOTTOM GRID — fills all remaining height: Quick Actions + Top Charts */}
-              <div style={{ flex: 1, minHeight: 0, display: 'grid', gridTemplateColumns: '2fr 3fr', gap: 16 }}>
+              <div className="mv-bottom-grid" style={{ flex: 1, minHeight: 0, display: 'grid', gridTemplateColumns: '2fr 3fr', gap: 16 }}>
 
                 {/* Quick Actions — stretches full grid height */}
                 <div style={{ background: C.card, borderRadius: 12, padding: '8px 14px', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
@@ -662,7 +683,7 @@ export default function StreamPage() {
                 Video iframe lives here so it's big and watchable.
                 Background = C.bg so only the card shows (no full-height coloured column).
             */}
-            <aside style={{ width: 430, flexShrink: 0, background: C.bg, padding: '16px 20px 16px 8px', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            <aside className={`mv-player${showMobilePlayer ? ' mv-show' : ''}`} style={{ width: 430, flexShrink: 0, background: C.bg, padding: '16px 20px 16px 8px', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
 
               <div style={{ background: C.card, borderRadius: 14, overflow: 'hidden', flex: 1, display: 'flex', flexDirection: 'column' }}>
 
@@ -771,6 +792,28 @@ export default function StreamPage() {
 
           </div>
         </div>
+      </div>
+
+      {/* ══ MOBILE BOTTOM NAV BAR — hidden on desktop via CSS ══ */}
+      <div className="mv-mobile-bar" style={{ display: 'none', position: 'fixed', bottom: 0, left: 0, right: 0, height: 56, background: C.sidebar, borderTop: `1px solid ${C.border}`, alignItems: 'center', justifyContent: 'space-around', zIndex: 40, padding: '0 8px' }}>
+        <button onClick={() => setActiveNav('explore')} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, background: 'none', border: 'none', cursor: 'pointer', color: activeNav === 'explore' ? C.accent : C.textSec, minWidth: 52, padding: '6px 0' }}>
+          <Home style={{ width: 20, height: 20 }} />
+          <span style={{ fontSize: 9, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Explore</span>
+        </button>
+        <button onClick={() => setActiveNav('queue')} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, background: 'none', border: 'none', cursor: 'pointer', color: activeNav === 'queue' ? C.accent : C.textSec, minWidth: 52, padding: '6px 0' }}>
+          <ListMusic style={{ width: 20, height: 20 }} />
+          <span style={{ fontSize: 9, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Queue</span>
+        </button>
+        <button
+          onClick={() => setShowMobilePlayer(p => !p)}
+          style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, background: 'none', border: 'none', cursor: 'pointer', color: showMobilePlayer ? C.accent : C.textSec, minWidth: 52, padding: '6px 0' }}>
+          <Music2 style={{ width: 22, height: 22 }} />
+          <span style={{ fontSize: 9, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Player</span>
+        </button>
+        <button onClick={copyLink} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, background: 'none', border: 'none', cursor: 'pointer', color: copied ? C.green : C.textSec, minWidth: 52, padding: '6px 0' }}>
+          {copied ? <Check style={{ width: 20, height: 20 }} /> : <Share2 style={{ width: 20, height: 20 }} />}
+          <span style={{ fontSize: 9, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{copied ? 'Copied' : 'Share'}</span>
+        </button>
       </div>
     </div>
   );
