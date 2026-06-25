@@ -4,8 +4,6 @@ import { getQueue, publishUpdate } from '@/lib/queue';
 import { getServerSession } from 'next-auth';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-// @ts-expect-error — no types for youtube-search-api
-import youtubesearchapi from 'youtube-search-api';
 
 const YT_REGEX = /^https?:\/\/(www\.)?youtube\.com\/watch\?v=[\w-]+(&\S*)?$/;
 const ROUND_MS  = 5 * 60 * 1000;   // 5 min per round
@@ -62,12 +60,17 @@ export async function POST(req: NextRequest) {
   if (isDup)
     return NextResponse.json({ message: 'Song is already in the queue' }, { status: 400 });
 
-  // Fetch YouTube metadata for title only — thumbnail derived from extractedId directly
-  const ytRes = await youtubesearchapi.GetVideoDetails(extractedId);
-  if (!ytRes?.title)
+  // Fetch YouTube title via oEmbed (free, no API key, officially supported)
+  const oembedRes = await fetch(
+    `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${extractedId}&format=json`
+  );
+  if (!oembedRes.ok)
     return NextResponse.json({ message: 'Failed to fetch video details' }, { status: 500 });
+  const oembedData = await oembedRes.json() as { title?: string };
+  if (!oembedData.title)
+    return NextResponse.json({ message: 'Could not read video title' }, { status: 500 });
 
-  const title     = ytRes.title as string;
+  const title     = oembedData.title;
   const thumbnail = `https://img.youtube.com/vi/${extractedId}/hqdefault.jpg`;
 
   // Pure Redis — no database write for songs
