@@ -37,9 +37,10 @@ export async function POST(req: NextRequest) {
     ...sessionKeys.map(k => redis.expire(k, TTL)),
   ]);
 
-  if (songIds.length > 0) {
-    await Promise.all(songIds.map(id => redis.expire(`song:${id}`, TTL)));
-  }
+  await Promise.all([
+    ...(songIds.length > 0 ? songIds.map(id => redis.expire(`song:${id}`, TTL)) : []),
+    redis.set(`creator_online:${creatorId}`, '1', { EX: 90 }),
+  ]);
 
   return new NextResponse(null, { status: 204 });
 }

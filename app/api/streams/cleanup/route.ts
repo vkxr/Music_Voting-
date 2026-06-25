@@ -25,7 +25,11 @@ export async function POST(req: NextRequest) {
     ...songIds.map(id => `song:${id}`),
   ];
 
-  if (keys.length) await redis.del(keys);
+  await Promise.all([
+    keys.length ? redis.del(keys) : Promise.resolve(),
+    redis.del(`creator_online:${creatorId}`),
+    redis.publish(`updates:${creatorId}`, JSON.stringify({ type: 'STREAM_ENDED' })),
+  ]);
 
   return new NextResponse(null, { status: 204 });
 }

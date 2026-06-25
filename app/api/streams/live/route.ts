@@ -46,13 +46,26 @@ export async function GET(req: NextRequest) {
         try { controller.enqueue(encoder.encode(': ping\n\n')); } catch { clearInterval(ping); }
       }, 25000);
 
+      // Detect creator going offline: if they were online and heartbeat key expires, push STREAM_ENDED
+      let creatorWasOnline = !!(await redis.get(`creator_online:${creatorId}`));
+      const onlineCheck = setInterval(async () => {
+        try {
+          const online = await redis.get(`creator_online:${creatorId}`);
+          if (online) { creatorWasOnline = true; return; }
+          if (creatorWasOnline) {
+            send({ type: 'STREAM_ENDED' });
+            creatorWasOnline = false;
+          }
+        } catch {}
+      }, 60000);
+
       subscriber = redis.duplicate() as unknown as PubSubClient;
       await subscriber.connect();
       await subscriber.subscribe(`updates:${creatorId}`, (message: string) => {
         send(JSON.parse(message));
       });
 
-      req.signal.addEventListener('abort', () => { clearInterval(ping); });
+      req.signal.addEventListener('abort', () => { clearInterval(ping); clearInterval(onlineCheck); });
     },
 
     async cancel() {
@@ -61,6 +74,7 @@ export async function GET(req: NextRequest) {
         await subscriber?.disconnect();
       } catch {}
     },
+
   });
 
   return new Response(stream, {

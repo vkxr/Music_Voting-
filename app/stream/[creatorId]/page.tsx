@@ -67,6 +67,7 @@ export default function StreamPage() {
   const [activeTab,    setActiveTab]    = useState<'MUSIC'|'QUEUE'|'LIVE'>('MUSIC');
   const [skipping,     setSkipping]     = useState(false);
   const [liveCount,    setLiveCount]    = useState(0);
+  const [streamEnded,  setStreamEnded]  = useState(false);
 
   const advRef      = useRef(false);
   const inputRef    = useRef<HTMLInputElement>(null);
@@ -96,6 +97,7 @@ export default function StreamPage() {
       if (d.type === 'QUEUE_UPDATE') setQueue(d.queue);
       if (d.type === 'NOW_PLAYING')  { setNow(d.song); setEndsAt(d.remainingMs != null ? Date.now() + d.remainingMs : null); setQueue(d.queue); advRef.current = false; }
       if (d.type === 'MODE_CHANGE')  setMode(d.mode);
+      if (d.type === 'STREAM_ENDED') setStreamEnded(true);
     };
     return () => es.close();
   }, [creatorId]);
@@ -236,6 +238,28 @@ export default function StreamPage() {
   const canAdd     = !!session?.user && (mode === 'public' || isCreator);
   const isLocked   = mode === 'creator' && !isCreator;
   const elapsedStr = `${Math.floor(elapsed / 60)}:${String(elapsed % 60).padStart(2, '0')}`;
+
+  if (streamEnded && !isCreator) return (
+    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: C.bg, color: C.text, fontFamily: 'system-ui,-apple-system,sans-serif', gap: 20, textAlign: 'center', padding: 24 }}>
+      <div style={{ width: 72, height: 72, borderRadius: '50%', background: 'rgba(83,82,237,0.14)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 8 }}>
+        <Music2 style={{ width: 32, height: 32, color: C.accent }} />
+      </div>
+      <h1 style={{ fontSize: 32, fontWeight: 800, letterSpacing: '-0.03em', margin: 0 }}>Stream Ended</h1>
+      <p style={{ fontSize: 15, color: C.textSec, margin: 0, maxWidth: 340, lineHeight: 1.5 }}>
+        Thanks for joining! The creator has ended this session.<br />Come back next time to vote for your favourite songs.
+      </p>
+      <div style={{ display: 'flex', gap: 10, marginTop: 8 }}>
+        <button onClick={() => window.location.href = '/'}
+          style={{ padding: '10px 24px', borderRadius: 999, background: C.accent, color: 'white', fontSize: 13, fontWeight: 600, border: 'none', cursor: 'pointer' }}>
+          Go Home
+        </button>
+        <button onClick={() => setStreamEnded(false)}
+          style={{ padding: '10px 24px', borderRadius: 999, background: 'rgba(255,255,255,0.07)', color: C.textSec, fontSize: 13, fontWeight: 600, border: `1px solid ${C.border}`, cursor: 'pointer' }}>
+          Stay on Page
+        </button>
+      </div>
+    </div>
+  );
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden', background: C.bg, color: C.text, fontFamily: 'system-ui,-apple-system,sans-serif', fontSize: 14, position: 'relative' }}>

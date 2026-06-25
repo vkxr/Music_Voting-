@@ -12,4 +12,5 @@ export type SSEEvent =
   | { type: 'INIT'; queue: QueueItem[]; nowPlaying: QueueItem | null; remainingMs: number | null; mode: QueueMode }
   | { type: 'QUEUE_UPDATE'; queue: QueueItem[] }
   | { type: 'NOW_PLAYING'; song: QueueItem | null; remainingMs: number | null; queue: QueueItem[] }
-  | { type: 'MODE_CHANGE'; mode: QueueMode };
+  | { type: 'MODE_CHANGE'; mode: QueueMode }
+  | { type: 'STREAM_ENDED' };
